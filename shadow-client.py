@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 
-import os
-import sys
 import hmac
 import hashlib
 import json
 import configparser
+import time
 
 from urllib.request import urlopen, Request
 
@@ -84,19 +83,25 @@ def api_call(method, request):
 
 if __name__ == '__main__':
 
-    reports = json.loads(api_call("reports/list", json.loads('{"detail":true}')))
-    lastDateReport = reports[-1]['timestamp'] # Getting date of the more update report.
+    while True:
 
-    reportTypes = json.loads(api_call("reports/types", json.loads(f'{{"detail":true, "date":"{lastDateReport}"}}')))
-    reportTypes = modify_description(reportTypes)
+        reports = json.loads(api_call("reports/list", json.loads('{"detail":true}')))
+        lastDateReport = reports[-1]['timestamp'] # Getting date of the more update report.
 
-    with open('log.json','a') as jsonFile:
+        reportTypes = json.loads(api_call("reports/types", json.loads(f'{{"detail":true, "date":"{lastDateReport}"}}')))
+        reportTypes = modify_description(reportTypes)
 
-        for report in [report for report in reports if report['timestamp'] == lastDateReport]:
-            devices = json.loads(api_call("reports/download", json.loads(f'{{"id": "{report["id"]}" }}')))
-            print(report['timestamp'], report['type'])
+        with open('log.json','a') as jsonFile:
 
-            for device in devices:
-                device = add_ip_port_fields(device)
-                device = add_type_report(device, reportTypes, report['type'])
-                log_json(jsonFile, device)
+            for report in [report for report in reports if report['timestamp'] == lastDateReport]:
+                devices = json.loads(api_call("reports/download", json.loads(f'{{"id": "{report["id"]}" }}')))
+                print(report['timestamp'], report['type'])
+
+                for device in devices:
+                    device = add_ip_port_fields(device)
+                    device = add_type_report(device, reportTypes, report['type'])
+                    log_json(jsonFile, device)
+
+        sleepTime = 60
+        time.sleep(sleepTime) # sleeps for 1 day
+        print(f"sleep for {sleepTime} seconds.")
