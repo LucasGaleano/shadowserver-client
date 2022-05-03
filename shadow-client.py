@@ -18,18 +18,32 @@ TIMEOUT = 45
 
 def add_ip_port_fields(device):
     '''
-    Change src_ip to ip and src_port to port in these reports:
-        event4_honeypot_http_scan
-        event4_sinkhole
-        event4_sinkhole_http
+    Change src_ip to srcip and src_port to srcport, also for dst_ip, dst_port, port, ip
+    for Wazuh to be able to parse the logs:
     '''
     if 'src_ip' in device:
-        device['ip'] = device['src_ip']
+        device['srcip'] = device['src_ip']
         del device['src_ip']
     if 'src_port' in device:
-        device['port'] = device['src_port']
+        device['srcport'] = device['src_port']
         del device['src_port']
+    if 'dst_ip' in device:
+        device['dstip'] = device['dst_ip']
+        del device['dst_ip']
+    if 'dst_port' in device:
+        device['dstport'] = device['dst_port']
+        del device['dst_port']
+    if 'port' in device:
+        device['srcport'] = device['port']
+        del device['port']
+    if 'ip' in device:
+        device['srcip'] = device['ip']
+        del device['ip']
 
+    return device
+
+def change_to_date_isoformat(device):
+    device['timestamp'] = device['timestamp'].replace(' ','T')
     return device
 
 def add_type_report(device, reportTypes, typeToFind):
@@ -95,13 +109,14 @@ if __name__ == '__main__':
 
             for report in [report for report in reports if report['timestamp'] == lastDateReport]:
                 devices = json.loads(api_call("reports/download", json.loads(f'{{"id": "{report["id"]}" }}')))
-                print(report['timestamp'], report['type'])
 
                 for device in devices:
                     device = add_ip_port_fields(device)
+                    device = change_to_date_isoformat(device)
                     device = add_type_report(device, reportTypes, report['type'])
                     log_json(jsonFile, device)
 
-        sleepTime = 60
-        time.sleep(sleepTime) # sleeps for 1 day
+        sleepTime = 60*60*24 # sleeps for 1 day
         print(f"sleep for {sleepTime} seconds.")
+        time.sleep(sleepTime) 
+        
